@@ -190,6 +190,8 @@ input[type=range]{width:128px;accent-color:var(--accent)}
     <div class="seg" id="sgFig"><button data-f="1">Bật</button><button data-f="0">Tắt</button></div></div>
   <div class="row"><div class="lab">Tỉ lệ khung</div>
     <div class="seg" id="sgRatio"><button data-r="3:4">3:4</button><button data-r="2:3">2:3</button><button data-r="9:16">9:16</button><button data-r="1:1">1:1</button></div></div>
+  <div class="row"><div class="lab">Chất lượng ảnh<small id="resNote">Cao xin độ phân giải lớn nhất máy cho, nặng máy hơn</small></div>
+    <div class="seg" id="sgQ"><button data-q="high">Cao</button><button data-q="mid">Vừa</button></div></div>
   <div class="row"><div class="lab">Camera</div>
     <div class="seg" id="sgFace"><button data-c="environment">Sau</button><button data-c="user">Trước</button></div></div>
   <button class="btn alt" id="closeOpts">Xong</button>
@@ -380,11 +382,11 @@ function poseSVG(p,W,H,o){
 /* ===================== trạng thái ===================== */
 const S={i:0,grid:true,fig:true,ratio:'3:4',face:'environment',op:.35,refId:null,
          shots:[],stream:null,demo:true,hand:false,ok:false,
-         scan:true,coach:true,auto:true,voice:false};
+         scan:true,coach:true,auto:true,voice:false,q:'high',res:''};
 const $=i=>document.getElementById(i);
 const E={};['stage','video','demo','ghost','crop','ov','coach','flash','start','startMsg','cv',
   'count','tipFit','strip','refs','gg','galSub','scrim','rngOp','btnRef','btnGal','btnShoot',
-  'fileIn','btnHand','mlst'].forEach(k=>E[k]=$(k));
+  'fileIn','btnHand','mlst','resNote'].forEach(k=>E[k]=$(k));
 const pose=()=>POSES[S.i];
 const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
            p4:'poses/4.webp',p5:'poses/5.webp',p6:'poses/6.webp'};
@@ -543,8 +545,14 @@ function scanOff(){SCAN.rank=[];E.tipFit.classList.remove('on');drawStrip();}
 async function startCam(){
   stop();
   try{
+    const want=S.q==='high'?{width:{ideal:3840},height:{ideal:2160}}
+                            :{width:{ideal:1920},height:{ideal:1080}};
     S.stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:S.face,width:{ideal:1920},height:{ideal:1920}},audio:false});
+      video:Object.assign({facingMode:S.face},want),audio:false});
+    try{const st=S.stream.getVideoTracks()[0].getSettings();
+        const mp=(st.width*st.height/1e6).toFixed(1);
+        S.res=st.width+'×'+st.height+' ('+mp+' chấm)';}catch(e){S.res='';}
+    syncOpts();
     E.video.srcObject=S.stream;
     E.video.style.transform=S.face==='user'?'scaleX(-1)':'none';
     await E.video.play().catch(()=>{});
@@ -741,7 +749,10 @@ function syncOpts(){
   set('#sgGrid',S.grid?'1':'0');set('#sgFig',S.fig?'1':'0');
   set('#sgRatio',S.ratio);set('#sgFace',S.face);
   set('#sgCoach',S.coach?'1':'0');set('#sgAuto',S.auto?'1':'0');
-  set('#sgVoice',S.voice?'1':'0');set('#sgScan',S.scan?'1':'0');
+  set('#sgVoice',S.voice?'1':'0');set('#sgScan',S.scan?'1':'0');set('#sgQ',S.q);
+  if(E.resNote)E.resNote.textContent=S.res
+    ?'Máy đang cho '+S.res
+    :'Cao xin độ phân giải lớn nhất máy cho, nặng máy hơn';
   E.rngOp.value=Math.round(S.op*100);
 }
 document.addEventListener('click',async e=>{
@@ -757,6 +768,7 @@ document.addEventListener('click',async e=>{
     if(x.f!==undefined){S.fig=x.f==='1';syncOpts();paint();return;}
     if(x.r){S.ratio=x.r;syncOpts();layout();return;}
     if(x.c){S.face=x.c;syncOpts();if(!S.demo)startCam();return;}
+    if(x.q){S.q=x.q;syncOpts();if(!S.demo)startCam();return;}
     if(x.k!==undefined){S.coach=x.k==='1';syncOpts();
       if(S.coach)ML.ready?mlStart():mlInit();else{mlStop();S.ok=false;paint();}return;}
     if(x.a!==undefined){S.auto=x.a==='1';syncOpts();return;}
