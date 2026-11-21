@@ -208,9 +208,11 @@ input[type=range]{width:128px;accent-color:var(--accent)}
   <h3>Ảnh vừa chụp</h3>
   <div class="sub" id="galSub">Chưa có ảnh nào</div>
   <div class="gg" id="gg"></div>
-  <button class="btn" id="btnSaveAll">Lưu tất cả vào Ảnh</button>
+  <button class="btn" id="btnSaveAll">Lưu những tấm chưa lưu</button>
+  <button class="btn alt" id="btnSaveEvery">Lưu lại tất cả</button>
+  <button class="btn alt" id="btnWipe">Xoá hết ảnh trong app</button>
   <button class="btn alt" id="closeGal">Xong</button>
-  <p class="note">Bấm Lưu sẽ mở khay chia sẻ của iPhone, chọn Lưu ảnh. Ảnh chưa lưu sẽ mất nếu đóng tab.</p>
+  <p class="note">Ảnh tự được giữ lại trong app ngay khi chụp, đóng tab hay tắt máy vẫn còn, giữ 200 tấm gần nhất. Bấm Lưu mở khay chia sẻ của iPhone, chọn Lưu ảnh để đưa vào thư viện. Dấu tích xanh là tấm đã đưa ra rồi.</p>
 </div>
 
 <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
@@ -389,12 +391,26 @@ const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
 
 /* ===================== kho ảnh mẫu ===================== */
 let _db,REFS=[];
-function db(){return _db||(_db=new Promise((ok,no)=>{const r=indexedDB.open('chupgium',1);
-  r.onupgradeneeded=()=>r.result.createObjectStore('refs',{keyPath:'id'});
+function db(){return _db||(_db=new Promise((ok,no)=>{const r=indexedDB.open('chupgium',2);
+  r.onupgradeneeded=e=>{const d=r.result;
+    if(!d.objectStoreNames.contains('refs'))d.createObjectStore('refs',{keyPath:'id'});
+    if(!d.objectStoreNames.contains('shots'))d.createObjectStore('shots',{keyPath:'id'});};
   r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);}))}
-const tx=(m,fn)=>db().then(d=>new Promise((ok,no)=>{
-  const t=d.transaction('refs',m),r=fn(t.objectStore('refs'));
+const tx=(m,fn,store)=>db().then(d=>new Promise((ok,no)=>{
+  const t=d.transaction(store||'refs',m),r=fn(t.objectStore(store||'refs'));
   t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>no(t.error);}));
+const KEEP=200;
+async function trim(){
+  try{const all=await tx('readonly',s=>s.getAllKeys(),'shots')||[];
+      if(all.length>KEEP){const old=all.sort((a,b)=>a-b).slice(0,all.length-KEEP);
+        for(const k of old)await tx('readwrite',s=>s.delete(k),'shots');}}catch(e){}
+}
+async function loadShots(){
+  try{const rows=await tx('readonly',s=>s.getAll(),'shots')||[];
+      S.shots=rows.sort((a,b)=>a.t-b.t)
+        .map(r=>({...r,url:URL.createObjectURL(r.blob)}));
+      count();}catch(e){}
+}
 async function loadRefs(){
   REFS.forEach(r=>URL.revokeObjectURL(r.url));
   try{const rows=await tx('readonly',s=>s.getAll())||[];
@@ -576,7 +592,9 @@ function shoot(){
   E.flash.classList.add('on');setTimeout(()=>E.flash.classList.remove('on'),80);
   if(navigator.vibrate)navigator.vibrate(12);
   cv.toBlob(b=>{if(!b)return;
-    S.shots.push({blob:b,url:URL.createObjectURL(b),saved:false,t:Date.now()});count();},
+    const rec={id:Date.now()+Math.floor(Math.random()*999),blob:b,saved:false,t:Date.now()};
+    S.shots.push({...rec,url:URL.createObjectURL(b)});count();
+    tx('readwrite',s=>s.put(rec),'shots').then(trim).catch(()=>{});},
     'image/jpeg',.93);
 }
 function count(){
@@ -587,11 +605,14 @@ async function save(list){
   list=list.filter(Boolean);if(!list.length)return;
   const files=list.map((s,i)=>new File([s.blob],'chupgium-'+(s.t+i)+'.jpg',{type:'image/jpeg'}));
   if(navigator.canShare&&navigator.canShare({files})){
-    try{await navigator.share({files});list.forEach(s=>s.saved=true);drawGal();return;}
+    try{await navigator.share({files});
+        list.forEach(s=>{s.saved=true;tx('readwrite',o=>o.put({id:s.id,blob:s.blob,saved:true,t:s.t}),'shots').catch(()=>{});});
+        drawGal();return;}
     catch(e){if(e&&e.name==='AbortError')return;}
   }
   list.forEach(s=>{const a=document.createElement('a');a.href=s.url;
-    a.download='chupgium-'+s.t+'.jpg';document.body.appendChild(a);a.click();a.remove();s.saved=true;});
+    a.download='chupgium-'+s.t+'.jpg';document.body.appendChild(a);a.click();a.remove();s.saved=true;
+    tx('readwrite',o=>o.put({id:s.id,blob:s.blob,saved:true,t:s.t}),'shots').catch(()=>{});});
   drawGal();
 }
 function drawGal(){
@@ -750,7 +771,13 @@ document.addEventListener('click',async e=>{
     case 'btnRef':drawRefs();sheet('shRef');break;
     case 'btnGal':drawGal();sheet('shGal');break;
     case 'btnAdd':E.fileIn.click();break;
-    case 'btnSaveAll':save(S.shots.slice());break;
+    case 'btnSaveAll':save(S.shots.filter(s=>!s.saved));break;
+    case 'btnSaveEvery':save(S.shots.slice());break;
+    case 'btnWipe':
+      if(S.shots.length&&confirm('Xoá hết ảnh trong app? Ảnh đã lưu vào Ảnh thì vẫn còn.')){
+        S.shots.forEach(s=>URL.revokeObjectURL(s.url));S.shots=[];
+        tx('readwrite',o=>o.clear(),'shots').catch(()=>{});drawGal();}
+      break;
     case 'closeOpts':case 'closeRef':case 'closeGal':case 'scrim':sheet(null);break;
     case 'btnHand':
       S.hand=!S.hand;document.body.classList.toggle('hand',S.hand);
@@ -775,7 +802,7 @@ window.addEventListener('resize',layout);
 window.addEventListener('orientationchange',()=>setTimeout(layout,260));
 E.video.addEventListener('loadedmetadata',layout);
 
-drawStrip();syncOpts();count();loadRefs();
+drawStrip();syncOpts();loadShots();loadRefs();
 requestAnimationFrame(()=>{
   layout();
   if(window.self!==window.top)
