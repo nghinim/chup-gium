@@ -63,6 +63,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   border:2.5px solid transparent;background:rgba(255,255,255,.14);line-height:0;
   box-shadow:0 2px 10px rgba(0,0,0,.25)}
 .strip button svg{width:100%;height:auto;display:block}
+.strip button img{width:100%;object-fit:cover;display:block}
 .strip button.on{border-color:var(--accent);transform:scale(1.06)}
 .strip button.fit{border-color:var(--ok)}
 .strip button.on.fit{border-color:var(--accent)}
@@ -383,6 +384,8 @@ const E={};['stage','video','demo','ghost','crop','ov','coach','flash','start','
   'count','tipFit','strip','refs','gg','galSub','scrim','rngOp','btnRef','btnGal','btnShoot',
   'fileIn','btnHand','mlst'].forEach(k=>E[k]=$(k));
 const pose=()=>POSES[S.i];
+const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
+           p4:'poses/4.webp',p5:'poses/5.webp',p6:'poses/6.webp'};
 
 /* ===================== kho ảnh mẫu ===================== */
 let _db,REFS=[];
@@ -434,8 +437,12 @@ function drawStrip(){
   E.strip.innerHTML=POSES.map((p,i)=>{
     const r=RATIOS[p.ratio],W=50,H=Math.round(50*r[1]/r[0]);
     const fit=SCAN.rank.indexOf(i);
+    const art=ART[p.id];
+    const pic=art
+      ? '<img src="'+art+'" alt="" style="height:'+H+'px">'
+      : poseSVG(p,W,H,{small:true,scene:true});
     return '<button data-i="'+i+'" class="'+(i===S.i?'on ':'')+(fit>=0?'fit':'')+'">'
-      +poseSVG(p,W,H,{small:true,scene:true})
+      +pic
       +(fit>=0?'<span class="st">'+(fit===0?'★':'☆')+'</span>':'')
       +'<i>'+(i+1)+'</i></button>';
   }).join('');
