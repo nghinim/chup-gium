@@ -47,7 +47,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .pill.ico{width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;font-size:17px}
 .pill.go{background:var(--accent);color:#fff}
 .sp{flex:1}
-#tipFit{display:none;background:var(--sun);color:#3a2a00;font-weight:750;font-size:13.5px}
+#tipFit{display:none;background:var(--ok);color:#fff;font-weight:700;font-size:13.5px}
 #tipFit.on{display:block}
 
 #coach{position:absolute;left:50%;transform:translateX(-50%);z-index:6;
@@ -65,8 +65,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .strip button svg{width:100%;height:auto;display:block}
 .strip button img{width:100%;object-fit:cover;display:block}
 .strip button.on{border-color:var(--accent);transform:scale(1.06)}
-.strip button.fit{border-color:var(--ok)}
-.strip button.on.fit{border-color:var(--accent)}
+.strip button.dim{opacity:.38}
 .strip button i{position:absolute;left:0;right:0;bottom:0;font-style:normal;
   font:700 9.5px/14px system-ui;text-align:center;background:rgba(6,6,9,.68);color:#fff}
 .strip button .st{position:absolute;top:2px;right:3px;font-size:11px;line-height:1;
@@ -382,12 +381,17 @@ function poseSVG(p,W,H,o){
 /* ===================== trạng thái ===================== */
 const S={i:0,grid:true,fig:true,ratio:'3:4',face:'environment',op:.35,refId:null,
          shots:[],stream:null,demo:true,hand:false,ok:false,
-         scan:true,coach:true,auto:true,voice:false,q:'high',res:''};
+         scan:true,coach:true,auto:true,voice:false,q:'high',res:'',
+         shot:null,lock:0};
 const $=i=>document.getElementById(i);
 const E={};['stage','video','demo','ghost','crop','ov','coach','flash','start','startMsg','cv',
   'count','tipFit','strip','refs','gg','galSub','scrim','rngOp','btnRef','btnGal','btnShoot',
   'fileIn','btnHand','mlst','resNote'].forEach(k=>E[k]=$(k));
 const pose=()=>POSES[S.i];
+const SHOT={p1:'portrait',p2:'full',p3:'half',p4:'full',p5:'full',
+            p6:'far',p7:'far',p8:'half',p9:'full',free:null};
+const SHOTNAME={far:'Người nhỏ trong cảnh',full:'Toàn thân',
+                half:'Nửa người',portrait:'Chân dung'};
 const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
            p4:'poses/4.webp',p5:'poses/5.webp',p6:'poses/6.webp'};
 
@@ -454,15 +458,13 @@ function pick(i){
 function drawStrip(){
   E.strip.innerHTML=POSES.map((p,i)=>{
     const r=RATIOS[p.ratio],W=50,H=Math.round(50*r[1]/r[0]);
-    const fit=SCAN.rank.indexOf(i);
     const art=ART[p.id];
     const pic=art
       ? '<img src="'+art+'" alt="" style="height:'+H+'px">'
       : poseSVG(p,W,H,{small:true,scene:true});
-    return '<button data-i="'+i+'" class="'+(i===S.i?'on ':'')+(fit>=0?'fit':'')+'">'
-      +pic
-      +(fit>=0?'<span class="st">'+(fit===0?'★':'☆')+'</span>':'')
-      +'<i>'+(i+1)+'</i></button>';
+    const dim=S.shot&&SHOT[p.id]&&SHOT[p.id]!==S.shot;
+    return '<button data-i="'+i+'" class="'+(i===S.i?'on ':'')+(dim?'dim':'')+'">'
+      +pic+'<i>'+(i+1)+'</i></button>';
   }).join('');
   const on=E.strip.querySelector('.on');
   if(on)on.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
@@ -532,14 +534,9 @@ function rankPoses(){
     ks.forEach(k=>{const t=(f[k]||0)-w[k];e+=t*t;});
     return{i,s:1-Math.sqrt(e/ks.length)};
   }).sort((a,b)=>b.s-a.s);
-  const top=sc.slice(0,3).map(x=>x.i);
-  if(top.join()!==SCAN.rank.join()){
-    SCAN.rank=top;drawStrip();
-    E.tipFit.textContent='★ Cảnh này hợp dáng '+(top[0]+1);
-    E.tipFit.classList.add('on');
-  }
+  SCAN.rank=sc.map(x=>x.i);
 }
-function scanOff(){SCAN.rank=[];E.tipFit.classList.remove('on');drawStrip();}
+function scanOff(){SCAN.rank=[];}
 
 /* ===================== camera ===================== */
 async function startCam(){
@@ -671,7 +668,7 @@ function mlLoop(){
   if(v.readyState>=2&&v.currentTime!==ML.tPrev&&now-ML.tLast>70){
     ML.tPrev=v.currentTime;ML.tLast=now;
     try{const r=ML.pl.detectForVideo(v,now);
-        ML.lm=(r&&r.landmarks&&r.landmarks[0])||null;judge();}catch(e){}
+        ML.lm=(r&&r.landmarks&&r.landmarks[0])||null;trackShot(ML.lm);judge();}catch(e){}
   }
   ML.raf=requestAnimationFrame(mlLoop);
 }
@@ -699,10 +696,66 @@ function body(){
   const cx=hp.length?(a.x+b.x+hp.reduce((t,q)=>t+q.x,0))/(2+hp.length):(a.x+b.x)/2;
   return{cx,headY:n.y,sw:Math.abs(a.x-b.x)};
 }
+/* Đọc cỡ người trong khung: xa toàn thân, toàn thân, nửa người hay chân dung.
+   Dựa vào bề ngang vai so với khung và việc có thấy mắt cá hay đầu gối không. */
+function shotOf(L){
+  const W=E.crop.clientWidth;if(!W)return null;
+  const ls=L[11],rs=L[12];
+  if(!ls||!rs||ls.visibility<.5||rs.visibility<.5)return null;
+  const a=toCrop(ls),b=toCrop(rs);if(!a||!b)return null;
+  const sw=Math.abs(a.x-b.x)/W;
+  const vis=i=>L[i]&&L[i].visibility>.55;
+  const ankle=vis(27)||vis(28), knee=vis(25)||vis(26);
+  if(ankle)return sw<.115?'far':'full';
+  if(knee)return 'half';
+  return sw>.30?'portrait':'half';
+}
+const HIST=[];let shotSince=0;
+function trackShot(L){
+  const k=L?shotOf(L):null;
+  HIST.push(k); if(HIST.length>12)HIST.shift();
+  if(HIST.length<8)return;
+  const tally={};HIST.forEach(x=>{if(x)tally[x]=(tally[x]||0)+1;});
+  let best=null,n=0;
+  for(const x in tally)if(tally[x]>n){n=tally[x];best=x;}
+  if(!best||n<8)return;
+  const now=Date.now();
+  if(best!==S.shot){S.shot=best;shotSince=now;drawStrip();showShot();}
+  if(now-S.lock<9000)return;
+  const cur=SHOT[pose().id];
+  if(cur===best)return;
+  if(now-shotSince<900)return;
+  const pool=POSES.map((p,i)=>i).filter(i=>SHOT[POSES[i].id]===best);
+  if(!pool.length)return;
+  const order=SCAN.rank.length?SCAN.rank:pool;
+  const target=order.find(i=>pool.indexOf(i)>=0);
+  if(target===undefined||target===S.i)return;
+  S.i=target;S.ratio=pose().ratio;
+  drawStrip();syncOpts();layout();showShot();
+  if(navigator.vibrate)navigator.vibrate(8);
+}
+function showShot(){
+  if(!S.shot){E.tipFit.classList.remove('on');return;}
+  const pool=POSES.filter(p=>SHOT[p.id]===S.shot);
+  const at=pool.findIndex(p=>p.id===pose().id);
+  E.tipFit.textContent=SHOTNAME[S.shot]+(at>=0?'  '+(at+1)+'/'+pool.length:'');
+  E.tipFit.classList.add('on');
+}
+/* vuốt ngang chỉ đổi biến thể trong cùng cỡ người */
+function cycle(dir){
+  S.lock=Date.now();
+  const pool=S.shot?POSES.map((p,i)=>i).filter(i=>SHOT[POSES[i].id]===S.shot):null;
+  if(!pool||pool.length<2){pick(S.i+dir);return;}
+  const at=pool.indexOf(S.i);
+  pick(pool[at<0?0:(at+dir+pool.length)%pool.length]);
+  showShot();
+}
 let okFrom=0,lastBurst=0,lastSaid='',lastSpoke=0;
 function judge(){
   const t=aim(),m=body();
-  if(!t||!m||!m.sw){coach(null);okFrom=0;return;}
+  if(!t||!m||!m.sw){coach(null);okFrom=0;
+    if(!ML.lm){S.shot=null;HIST.length=0;E.tipFit.classList.remove('on');}
+    return;}
   const k=m.sw/t.sw,dx=(m.cx-t.cx)/t.W,dy=(m.headY-t.headY)/t.H;
   let msg,ok=false;
   if(k<.84)msg='Tiến lại gần';
@@ -761,7 +814,7 @@ document.addEventListener('click',async e=>{
     const x=d.dataset;
     if(x.del!==undefined){e.stopPropagation();await tx('readwrite',s=>s.delete(+x.del));
       if(S.refId===+x.del)S.refId=null;await loadRefs();return;}
-    if(x.i!==undefined){pick(+x.i);return;}
+    if(x.i!==undefined){S.lock=Date.now();pick(+x.i);showShot();return;}
     if(x.pick){S.refId=x.pick==='none'?null:+x.pick;drawRefs();return;}
     if(x.shot!==undefined){save([S.shots[+x.shot]]);return;}
     if(x.g!==undefined){S.grid=x.g==='1';syncOpts();paint();return;}
@@ -809,7 +862,7 @@ let x0=null;
 E.stage.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
 E.stage.addEventListener('touchend',e=>{
   if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;
-  if(Math.abs(dx)>55)pick(S.i+(dx<0?1:-1));},{passive:true});
+  if(Math.abs(dx)>55)cycle(dx<0?1:-1);},{passive:true});
 window.addEventListener('resize',layout);
 window.addEventListener('orientationchange',()=>setTimeout(layout,260));
 E.video.addEventListener('loadedmetadata',layout);
