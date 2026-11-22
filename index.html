@@ -179,7 +179,7 @@ input[type=range]{width:128px;accent-color:var(--accent)}
     <div class="seg" id="sgScan"><button data-s="1">Bật</button><button data-s="0">Tắt</button></div></div>
   <div class="row"><div class="lab">Trợ lý căn khung<small>Nhận dạng người rồi nhắc lùi ra, hạ máy, dịch trái phải</small></div>
     <div class="seg" id="sgCoach"><button data-k="1">Bật</button><button data-k="0">Tắt</button></div></div>
-  <div class="row"><div class="lab">Tự bấm khi khớp<small>Giữ đúng khung hơn một giây là tự chụp ba tấm</small></div>
+  <div class="row"><div class="lab">Tự bấm khi khớp<small>Đang tắt. Bật thì giữ đúng khung hơn một giây là tự chụp ba tấm</small></div>
     <div class="seg" id="sgAuto"><button data-a="1">Bật</button><button data-a="0">Tắt</button></div></div>
   <div class="row"><div class="lab">Đọc chỉ dẫn thành tiếng</div>
     <div class="seg" id="sgVoice"><button data-v="1">Bật</button><button data-v="0">Tắt</button></div></div>
@@ -381,7 +381,7 @@ function poseSVG(p,W,H,o){
 /* ===================== trạng thái ===================== */
 const S={i:0,grid:true,fig:true,ratio:'3:4',face:'environment',op:.35,refId:null,
          shots:[],stream:null,demo:true,hand:false,ok:false,
-         scan:true,coach:true,auto:true,voice:false,q:'high',res:'',
+         scan:true,coach:true,auto:false,voice:false,q:'high',res:'',
          shot:null,lock:0};
 const $=i=>document.getElementById(i);
 const E={};['stage','video','demo','ghost','crop','ov','coach','flash','start','startMsg','cv',
