@@ -357,6 +357,9 @@ const POSES=[
  {id:'p16',fig:'standing',cx:.50,topY:.58,h:.34,ratio:'3:4',sc:'bund',
   name:'Người giữa khung, đường chân trời thấp',
   hint:'Hạ đường chân trời xuống thấp cho trời rộng ra. Người đứng giữa, chân sát vạch dưới.'},
+ {id:'p17',fig:'standing',cx:.52,topY:.46,h:.51,ratio:'3:4',sc:'temple',
+  name:'Toàn thân trên bậc thềm, công trình đối xứng',
+  hint:'Đứng giữa bậc thềm, canh công trình cân đối hai bên. Người chiếm nửa dưới khung, chừa trọn phần mái phía trên.'},
  {id:'free',fig:null,cx:.5,topY:.3,h:.6,ratio:'3:4',sc:'plain',
   name:'Tự do, chỉ lưới và thước cân',
   hint:'Chỉ có lưới và thước cân máy. Dùng khi tự căn góc hoặc khi đã chọn ảnh mẫu riêng.'}
@@ -428,7 +431,7 @@ const SHOT={p1:'portrait',p2:'full',p3:'half',p4:'full',p5:'full',
             p6:'far',p7:'far',p8:'half',p9:'full',
             p10:'portrait',p11:'portrait',p12:'portrait',
             p13:'half',p14:'half',
-            p15:'far',p16:'far',free:null};
+            p15:'far',p16:'far',p17:'full',free:null};
 const SHOTNAME={far:'Người nhỏ trong cảnh',full:'Toàn thân',
                 half:'Nửa người',portrait:'Chân dung'};
 const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
@@ -538,7 +541,8 @@ const WANT={
   p13:{clutter:.50,vert:.50},
   p14:{clutter:.60,vert:.55},
   p15:{openTop:.70,clutter:.30},
-  p16:{openTop:.85,clutter:.20,lineY:.70,lineStr:.45}
+  p16:{openTop:.85,clutter:.20,lineY:.70,lineStr:.45},
+  p17:{vert:.70,clutter:.45,openTop:.45,lineY:.55}
 };
 function scan(){
   const v=E.video;if(!v.videoWidth)return;
