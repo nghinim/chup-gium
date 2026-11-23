@@ -169,10 +169,10 @@ input[type=range]{width:120px;accent-color:var(--pink)}
 </div>
 
 <div class="hud top">
-  <span class="pill" id="count">1/10</span>
   <span class="pill" id="tipFit"></span>
   <span class="sp"></span>
-  <button class="pill" id="btnHand">Đưa máy</button>
+  <button class="pill" id="btnLock">Khoá</button>
+  <button class="pill" id="btnHand">Đưa</button>
   <button class="pill ico" id="btnOpts">Cài</button>
 </div>
 
@@ -397,10 +397,10 @@ function poseSVG(p,W,H,o){
 const S={i:0,grid:true,fig:true,ratio:'3:4',face:'environment',op:.35,refId:null,
          shots:[],stream:null,demo:true,hand:false,ok:false,
          scan:true,coach:true,auto:false,voice:false,q:'high',res:'',
-         shot:null,lock:0};
+         shot:null,lock:0,locked:false};
 const $=i=>document.getElementById(i);
 const E={};['stage','video','demo','ghost','crop','ov','coach','flash','start','startMsg','cv',
-  'count','tipFit','strip','refs','gg','galSub','scrim','rngOp','btnRef','btnGal','btnShoot',
+  'tipFit','btnLock','strip','refs','gg','galSub','scrim','rngOp','btnRef','btnGal','btnShoot',
   'fileIn','btnHand','mlst','resNote'].forEach(k=>E[k]=$(k));
 const pose=()=>POSES[S.i];
 const SHOT={p1:'portrait',p2:'full',p3:'half',p4:'full',p5:'full',
@@ -463,7 +463,6 @@ function paint(){
   E.ov=$('ov');
   E.demo.innerHTML=S.demo?poseSVG(p,window.innerWidth,window.innerHeight,{grid:false,fig:false,scene:true}):'';
   E.demo.style.display=S.demo?'block':'none';
-  E.count.textContent=(S.i+1)+'/'+POSES.length;
   E.crop.classList.toggle('good',S.ok);
 }
 function pick(i){
@@ -718,42 +717,54 @@ function shotOf(L){
   const ls=L[11],rs=L[12];
   if(!ls||!rs||ls.visibility<.5||rs.visibility<.5)return null;
   const a=toCrop(ls),b=toCrop(rs);if(!a||!b)return null;
-  const sw=Math.abs(a.x-b.x)/W;
-  const vis=i=>L[i]&&L[i].visibility>.55;
-  const ankle=vis(27)||vis(28), knee=vis(25)||vis(26);
-  if(ankle)return sw<.115?'far':'full';
+  const sw=Math.abs(a.x-b.x)/W, cur=S.shot;
+  /* ngưỡng vào khác ngưỡng ra, để quanh mốc không bị lật qua lật lại */
+  const aTh=(cur==='full'||cur==='far')?.45:.66;
+  const kTh=(cur==='half')?.45:.63;
+  const vis=(i,t)=>L[i]&&L[i].visibility>t;
+  const ankle=vis(27,aTh)||vis(28,aTh), knee=vis(25,kTh)||vis(26,kTh);
+  if(ankle){
+    if(cur==='far')return sw>.135?'full':'far';
+    return sw<.095?'far':'full';
+  }
   if(knee)return 'half';
-  return sw>.30?'portrait':'half';
+  if(cur==='portrait')return sw<.26?'half':'portrait';
+  return sw>.34?'portrait':'half';
 }
-const HIST=[];let shotSince=0;
+const HIST=[];let shotSince=0,lastSwitch=0;
 function trackShot(L){
   const k=L?shotOf(L):null;
-  HIST.push(k); if(HIST.length>12)HIST.shift();
-  if(HIST.length<8)return;
+  HIST.push(k); if(HIST.length>20)HIST.shift();
+  if(HIST.length<16)return;
   const tally={};HIST.forEach(x=>{if(x)tally[x]=(tally[x]||0)+1;});
   let best=null,n=0;
   for(const x in tally)if(tally[x]>n){n=tally[x];best=x;}
-  if(!best||n<8)return;
+  if(!best||n<14)return;
   const now=Date.now();
-  if(best!==S.shot){S.shot=best;shotSince=now;drawStrip();showShot();}
-  if(now-S.lock<9000)return;
+  if(best!==S.shot){const was=S.shot;S.shot=best;shotSince=now;
+    if(was!==best)drawStrip();showShot();}
+  if(S.locked)return;
+  if(now-S.lock<9000||now-lastSwitch<4000||now-shotSince<2000)return;
   const cur=SHOT[pose().id];
   if(cur===best)return;
-  if(now-shotSince<900)return;
   const pool=POSES.map((p,i)=>i).filter(i=>SHOT[POSES[i].id]===best);
   if(!pool.length)return;
   const order=SCAN.rank.length?SCAN.rank:pool;
   const target=order.find(i=>pool.indexOf(i)>=0);
   if(target===undefined||target===S.i)return;
+  lastSwitch=now;
   S.i=target;S.ratio=pose().ratio;
   drawStrip();syncOpts();layout();showShot();
   if(navigator.vibrate)navigator.vibrate(8);
 }
 function showShot(){
-  if(!S.shot){E.tipFit.classList.remove('on');return;}
-  const pool=POSES.filter(p=>SHOT[p.id]===S.shot);
-  const at=pool.findIndex(p=>p.id===pose().id);
-  E.tipFit.textContent=SHOTNAME[S.shot]+(at>=0?'  '+(at+1)+'/'+pool.length:'');
+  let t;
+  if(S.shot){
+    const pool=POSES.filter(p=>SHOT[p.id]===S.shot);
+    const at=pool.findIndex(p=>p.id===pose().id);
+    t=SHOTNAME[S.shot]+(at>=0?' '+(at+1)+'/'+pool.length:'');
+  }else t='Dáng '+(S.i+1)+'/'+POSES.length;
+  E.tipFit.textContent=(S.locked?'• ':'')+t;
   E.tipFit.classList.add('on');
 }
 /* vuốt ngang chỉ đổi biến thể trong cùng cỡ người */
@@ -769,7 +780,7 @@ let okFrom=0,lastBurst=0,lastSaid='',lastSpoke=0;
 function judge(){
   const t=aim(),m=body();
   if(!t||!m||!m.sw){coach(null);okFrom=0;
-    if(!ML.lm){S.shot=null;HIST.length=0;E.tipFit.classList.remove('on');}
+    if(!ML.lm){S.shot=null;HIST.length=0;showShot();}
     return;}
   const k=m.sw/t.sw,dx=(m.cx-t.cx)/t.W,dy=(m.headY-t.headY)/t.H;
   let msg,ok=false;
@@ -846,6 +857,13 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('button')||e.target;
   switch(b.id){
     case 'btnShoot':shoot();break;
+    case 'btnLock':
+      S.locked=!S.locked;
+      E.btnLock.textContent=S.locked?'Đã khoá':'Khoá';
+      E.btnLock.classList.toggle('go',S.locked);
+      showShot();
+      if(navigator.vibrate)navigator.vibrate(10);
+      break;
     case 'btnStart':startCam();break;
     case 'btnOpts':syncOpts();sheet('shOpts');break;
     case 'btnRef':drawRefs();sheet('shRef');break;
@@ -873,18 +891,35 @@ E.fileIn.addEventListener('change',async ev=>{
     await tx('readwrite',s=>s.put({id:Date.now()+Math.floor(Math.random()*999),blob:f}));
   ev.target.value='';await loadRefs();
 });
-let x0=null;
-E.stage.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
+let tx0=null,ty0=null,tt0=0;
+E.stage.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1){tx0=null;return;}
+  tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;tt0=Date.now();
+},{passive:true});
 E.stage.addEventListener('touchend',e=>{
-  if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;
-  if(Math.abs(dx)>55)cycle(dx<0?1:-1);},{passive:true});
-window.addEventListener('resize',layout);
-window.addEventListener('orientationchange',()=>setTimeout(layout,260));
+  if(tx0==null)return;
+  const t=e.changedTouches[0],dx=t.clientX-tx0,dy=t.clientY-ty0,dt=Date.now()-tt0;
+  tx0=null;
+  /* phải là cú vuốt ngang dứt khoát, không phải tay chạm nhầm lúc cầm máy */
+  if(Math.abs(dx)>90&&Math.abs(dy)<55&&Math.abs(dx)>Math.abs(dy)*2&&dt<650)
+    cycle(dx<0?1:-1);
+},{passive:true});
+let baseH=0,rz=0;
+window.addEventListener('resize',()=>{
+  clearTimeout(rz);
+  rz=setTimeout(()=>{
+    const h=window.innerHeight;
+    /* bỏ qua co giãn nhỏ do thanh địa chỉ Safari trượt lên xuống */
+    if(baseH&&Math.abs(h-baseH)<130)return;
+    baseH=h;layout();
+  },220);
+});
+window.addEventListener('orientationchange',()=>setTimeout(()=>{baseH=window.innerHeight;layout();},300));
 E.video.addEventListener('loadedmetadata',layout);
 
-drawStrip();syncOpts();loadShots();loadRefs();
+drawStrip();syncOpts();loadShots();loadRefs();showShot();
 requestAnimationFrame(()=>{
-  layout();
+  baseH=window.innerHeight;layout();
   if(window.self!==window.top)
     demoMode('Trang đang nằm trong khung nhúng nên camera bị chặn. Mở ở địa chỉ web riêng thì chạy.');
 });
