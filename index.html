@@ -308,7 +308,7 @@ const SC={
   plain:[{t:'r',x:0,y:0,w:1,h:1,c:'sky'},{t:'r',x:0,y:.72,w:1,h:.28,c:'near'}]
 };
 
-const POSES=[
+const POSES_ALL=[
  {id:'p1',fig:'portrait',cx:.70,topY:.30,h:.62,ratio:'2:3',sc:'temple',
   name:'Nửa người lệch phải, công trình sau lưng',
   hint:'Người đứng gần máy, lệch hẳn sang phải. Công trình nằm trọn ở nửa trên bên trái. Chạm vào mặt trên màn hình để lấy nét, nền phía sau mờ đi là đúng.'},
@@ -394,6 +394,11 @@ const POSES=[
   name:'Tự do, chỉ lưới và thước cân',
   hint:'Chỉ có lưới và thước cân máy. Dùng khi tự căn góc hoặc khi đã chọn ảnh mẫu riêng.'}
 ];
+/* Bộ chủ đạo: mỗi nhóm cỡ người giữ 3 tới 4 bố cục khác hẳn nhau.
+   Các bố cục còn lại vẫn nằm trong POSES_ALL, bật lại bằng cách thêm id vào đây. */
+const CORE=new Set(['p1','p2','p3','p4','p5','p6','p7','p10','p11',
+                    'p13','p17','p18','p22','p24','p25','p26','free']);
+const POSES = POSES_ALL.filter(p=>CORE.has(p.id));
 const RATIOS={'3:4':[3,4],'2:3':[2,3],'9:16':[9,16],'1:1':[1,1]};
 
 /* ===== vẽ ===== */
