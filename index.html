@@ -396,8 +396,8 @@ const POSES_ALL=[
 ];
 /* Bộ chủ đạo: mỗi nhóm cỡ người giữ 3 tới 4 bố cục khác hẳn nhau.
    Các bố cục còn lại vẫn nằm trong POSES_ALL, bật lại bằng cách thêm id vào đây. */
-const CORE=new Set(['p1','p2','p3','p4','p5','p6','p7','p10','p11',
-                    'p13','p17','p18','p22','p24','p25','p26','free']);
+const CORE=new Set(['p1','p2','p3','p4','p5','p6','p7','p8','p10','p11',
+                    'p13','p17','p18','p22','p23','p24','p25','p26','p27','free']);
 const POSES = POSES_ALL.filter(p=>CORE.has(p.id));
 const RATIOS={'3:4':[3,4],'2:3':[2,3],'9:16':[9,16],'1:1':[1,1]};
 
