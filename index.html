@@ -348,9 +348,9 @@ const POSES=[
  {id:'p13',fig:'standing',cx:.50,topY:.05,h:1.45,ratio:'3:4',sc:'alley',
   name:'Nửa người chính diện, cắt ngang hông',
   hint:'Cắt ngang ngay dưới hông, đừng cắt đúng khớp. Hai tay buông tự nhiên.'},
- {id:'p14',fig:'hip',cx:.36,topY:.08,h:1.50,ratio:'2:3',sc:'hutong',
-  name:'Nửa người lệch trái, tay chống hông',
-  hint:'Người lệch trái, một tay chống hông. Chừa phần phải cho quán xá phía sau.'},
+ {id:'p14',fig:'lean',cx:.36,topY:.08,h:1.50,ratio:'2:3',sc:'hutong',
+  name:'Nửa người lệch trái, dáng thả lỏng',
+  hint:'Người lệch trái, vai thả lỏng, tay buông hoặc đút túi. Chừa phần phải cho quán xá phía sau.'},
  {id:'p15',fig:'standing',cx:.28,topY:.62,h:.30,ratio:'3:4',sc:'bundwide',
   name:'Người ở góc dưới trái, cảnh choán phần trên',
   hint:'Lùi xa, đặt người ở góc dưới bên trái. Cảnh chiếm trọn hai phần ba phía trên.'},
@@ -360,6 +360,21 @@ const POSES=[
  {id:'p17',fig:'standing',cx:.52,topY:.46,h:.51,ratio:'3:4',sc:'temple',
   name:'Toàn thân trên bậc thềm, công trình đối xứng',
   hint:'Đứng giữa bậc thềm, canh công trình cân đối hai bên. Người chiếm nửa dưới khung, chừa trọn phần mái phía trên.'},
+ {id:'p18',fig:'standing',cx:.50,topY:.52,h:.30,ratio:'3:4',sc:'temple',
+  name:'Đứng trong khung cửa, khung trong khung',
+  hint:'Lùi ra ngoài cửa, lấy trọn ô cửa làm viền bao quanh. Người đứng chính giữa phần sáng, chừa đều hai bên.'},
+ {id:'p19',fig:'standing',cx:.38,topY:.66,h:.26,ratio:'3:4',sc:'plain',
+  name:'Người nhỏ trước mảng tường lớn',
+  hint:'Lùi thật xa cho mảng tường choán gần hết khung. Người đứng nhỏ ở một phần ba dưới, lệch hẳn sang một bên.'},
+ {id:'p20',fig:'reach',cx:.40,topY:.40,h:.58,ratio:'3:4',sc:'tower',
+  name:'Vươn tay chạm công trình ở xa',
+  hint:'Đứng gần máy hơn công trình nhiều, vươn tay về phía nó. Người lùi tới lui cho bàn tay chạm đúng đỉnh.'},
+ {id:'p21',fig:'turn',cx:.48,topY:.44,h:.48,ratio:'2:3',sc:'wall',
+  name:'Quay lưng bước lên bậc thang',
+  hint:'Người quay lưng bước lên, máy đứng yên phía dưới. Lấy bậc thang chạy dài phía trước làm đường dẫn mắt.'},
+ {id:'p22',fig:'open',cx:.45,topY:.14,h:1.30,ratio:'3:4',sc:'bund',
+  name:'Tựa lan can cao, ngửa mặt',
+  hint:'Tựa lưng vào lan can, một tay vịn dọc thanh ngang, mặt hơi ngửa lên. Cắt ngang hông, lấy trọn cảnh phía sau.'},
  {id:'free',fig:null,cx:.5,topY:.3,h:.6,ratio:'3:4',sc:'plain',
   name:'Tự do, chỉ lưới và thước cân',
   hint:'Chỉ có lưới và thước cân máy. Dùng khi tự căn góc hoặc khi đã chọn ảnh mẫu riêng.'}
@@ -431,7 +446,8 @@ const SHOT={p1:'portrait',p2:'full',p3:'half',p4:'full',p5:'full',
             p6:'far',p7:'far',p8:'half',p9:'full',
             p10:'portrait',p11:'portrait',p12:'portrait',
             p13:'half',p14:'half',
-            p15:'far',p16:'far',p17:'full',free:null};
+            p15:'far',p16:'far',p17:'full',
+            p18:'far',p19:'far',p20:'full',p21:'full',p22:'half',free:null};
 const SHOTNAME={far:'Người nhỏ trong cảnh',full:'Toàn thân',
                 half:'Nửa người',portrait:'Chân dung'};
 const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
@@ -542,7 +558,12 @@ const WANT={
   p14:{clutter:.60,vert:.55},
   p15:{openTop:.70,clutter:.30},
   p16:{openTop:.85,clutter:.20,lineY:.70,lineStr:.45},
-  p17:{vert:.70,clutter:.45,openTop:.45,lineY:.55}
+  p17:{vert:.70,clutter:.45,openTop:.45,lineY:.55},
+  p18:{vert:.78,clutter:.55,openTop:.22},
+  p19:{openTop:.80,clutter:.14,vert:.22},
+  p20:{vert:.72,clutter:.45,openTop:.52},
+  p21:{vert:.58,clutter:.52,lineY:.50,lineStr:.55},
+  p22:{lineStr:.62,lineY:.58,openTop:.52}
 };
 function scan(){
   const v=E.video;if(!v.videoWidth)return;
