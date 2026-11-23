@@ -171,7 +171,7 @@ input[type=range]{width:120px;accent-color:var(--pink)}
 <div class="hud top">
   <span class="pill" id="tipFit"></span>
   <span class="sp"></span>
-  <button class="pill" id="btnLock">Khoá</button>
+  <button class="pill" id="btnRef">Mẫu</button>
   <button class="pill" id="btnHand">Đưa</button>
   <button class="pill ico" id="btnOpts">Cài</button>
 </div>
@@ -179,7 +179,7 @@ input[type=range]{width:120px;accent-color:var(--pink)}
 <div class="hud bot">
   <div class="strip" id="strip"></div>
   <div class="deck">
-    <button class="slot" id="btnRef">Mẫu</button>
+    <button class="slot" id="btnLock">Khoá</button>
     <button class="shut" id="btnShoot" aria-label="Chụp"></button>
     <button class="slot" id="btnGal">Ảnh</button>
   </div>
@@ -336,6 +336,27 @@ const POSES=[
  {id:'p9',fig:'turn',cx:.448,topY:.505,h:.417,ratio:'3:4',sc:'tower',
   name:'Quay đầu nhìn lại giữa phố',
   hint:'Đi về phía trước vài bước rồi quay đầu nhìn lại. Người lệch sang trái, chừa con đường chạy dài về phía sau.'},
+ {id:'p10',fig:'portrait',cx:.50,topY:.06,h:.78,ratio:'3:4',sc:'plain',
+  name:'Chân dung chính diện, mặt ở 1/3 trên',
+  hint:'Máy ngang tầm mắt, cách một sải tay. Mặt nằm ở vạch ngang trên, chừa khoảng trống phía trên đầu.'},
+ {id:'p11',fig:'portrait',cx:.50,topY:-.18,h:1.50,ratio:'3:4',sc:'plain',
+  name:'Cận mặt, cắt ngang trán',
+  hint:'Tiến sát lại, cắt ngang trán cho mặt choán khung. Lấy nét vào mắt.'},
+ {id:'p12',fig:'portrait',cx:.33,topY:.10,h:.80,ratio:'3:4',sc:'tree',
+  name:'Chân dung lệch trái, chừa nền bên phải',
+  hint:'Người lệch hẳn sang trái, chừa nửa phải cho khung cảnh. Mắt nhìn về phía khoảng trống.'},
+ {id:'p13',fig:'standing',cx:.50,topY:.05,h:1.45,ratio:'3:4',sc:'alley',
+  name:'Nửa người chính diện, cắt ngang hông',
+  hint:'Cắt ngang ngay dưới hông, đừng cắt đúng khớp. Hai tay buông tự nhiên.'},
+ {id:'p14',fig:'hip',cx:.36,topY:.08,h:1.50,ratio:'2:3',sc:'hutong',
+  name:'Nửa người lệch trái, tay chống hông',
+  hint:'Người lệch trái, một tay chống hông. Chừa phần phải cho quán xá phía sau.'},
+ {id:'p15',fig:'standing',cx:.28,topY:.62,h:.30,ratio:'3:4',sc:'bundwide',
+  name:'Người ở góc dưới trái, cảnh choán phần trên',
+  hint:'Lùi xa, đặt người ở góc dưới bên trái. Cảnh chiếm trọn hai phần ba phía trên.'},
+ {id:'p16',fig:'standing',cx:.50,topY:.58,h:.34,ratio:'3:4',sc:'bund',
+  name:'Người giữa khung, đường chân trời thấp',
+  hint:'Hạ đường chân trời xuống thấp cho trời rộng ra. Người đứng giữa, chân sát vạch dưới.'},
  {id:'free',fig:null,cx:.5,topY:.3,h:.6,ratio:'3:4',sc:'plain',
   name:'Tự do, chỉ lưới và thước cân',
   hint:'Chỉ có lưới và thước cân máy. Dùng khi tự căn góc hoặc khi đã chọn ảnh mẫu riêng.'}
@@ -404,7 +425,10 @@ const E={};['stage','video','demo','ghost','crop','ov','coach','flash','start','
   'fileIn','btnHand','mlst','resNote'].forEach(k=>E[k]=$(k));
 const pose=()=>POSES[S.i];
 const SHOT={p1:'portrait',p2:'full',p3:'half',p4:'full',p5:'full',
-            p6:'far',p7:'far',p8:'half',p9:'full',free:null};
+            p6:'far',p7:'far',p8:'half',p9:'full',
+            p10:'portrait',p11:'portrait',p12:'portrait',
+            p13:'half',p14:'half',
+            p15:'far',p16:'far',free:null};
 const SHOTNAME={far:'Người nhỏ trong cảnh',full:'Toàn thân',
                 half:'Nửa người',portrait:'Chân dung'};
 const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
@@ -488,7 +512,7 @@ function drawRefs(){
    +REFS.map(r=>'<button class="r'+(S.refId===r.id?' on':'')+'" data-pick="'+r.id+'">'
      +'<img src="'+r.url+'"><span class="x" data-del="'+r.id+'">×</span></button>').join('');
   const r=REFS.find(x=>x.id===S.refId);
-  E.btnRef.innerHTML=r?'<img src="'+r.url+'">':'Mẫu';
+  E.btnRef.classList.toggle('go',!!r);
   E.ghost.style.display=r?'block':'none';
   if(r)E.ghost.src=r.url;
   E.ghost.style.opacity=S.op;
@@ -507,7 +531,14 @@ const WANT={
   p6:{openTop:.80,clutter:.25},
   p7:{vert:.85,clutter:.60,openTop:.30},
   p8:{lineStr:.70,lineY:.70,bright:.35},
-  p9:{vert:.60,clutter:.55,lineY:.45}
+  p9:{vert:.60,clutter:.55,lineY:.45},
+  p10:{clutter:.35,openTop:.50},
+  p11:{clutter:.30,openTop:.35},
+  p12:{vert:.55,clutter:.45,openTop:.45},
+  p13:{clutter:.50,vert:.50},
+  p14:{clutter:.60,vert:.55},
+  p15:{openTop:.70,clutter:.30},
+  p16:{openTop:.85,clutter:.20,lineY:.70,lineStr:.45}
 };
 function scan(){
   const v=E.video;if(!v.videoWidth)return;
