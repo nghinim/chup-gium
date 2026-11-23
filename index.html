@@ -375,6 +375,21 @@ const POSES=[
  {id:'p22',fig:'open',cx:.45,topY:.14,h:1.30,ratio:'3:4',sc:'bund',
   name:'Tựa lan can cao, ngửa mặt',
   hint:'Tựa lưng vào lan can, một tay vịn dọc thanh ngang, mặt hơi ngửa lên. Cắt ngang hông, lấy trọn cảnh phía sau.'},
+ {id:'p23',fig:'standing',cx:.62,topY:.30,h:.64,ratio:'3:4',sc:'hutong',
+  name:'Đứng cạnh mảng màu lớn, tay chạm vào',
+  hint:'Tìm mảng màu lớn như tường đỏ, áp phích hay cánh cửa. Người đứng lệch một bên, một tay chạm vào mảng đó.'},
+ {id:'p24',fig:'sitrail',cx:.42,topY:.30,h:.62,ratio:'3:4',sc:'bund',
+  name:'Ngồi ghế, chân bắt chéo, cảnh phía sau',
+  hint:'Ngồi nghiêng người, chân bắt chéo, mắt nhìn ra xa. Máy hạ ngang tầm ngực, lấy trọn cảnh phía sau.'},
+ {id:'p25',fig:'sitrail',cx:.40,topY:.34,h:.56,ratio:'3:4',sc:'alley',
+  name:'Ngồi trong hành lang dài',
+  hint:'Ngồi lệch sang một bên hành lang, để dãy cột chạy hút về phía sau làm đường dẫn mắt.'},
+ {id:'p26',fig:'sitrail',cx:.50,topY:.38,h:.55,ratio:'2:3',sc:'temple',
+  name:'Ngồi trên bậc thềm, chân duỗi',
+  hint:'Ngồi trên bậc thềm, chân duỗi về phía máy. Máy hạ thấp gần ngang mặt bậc.'},
+ {id:'p27',fig:'portrait',cx:.30,topY:.58,h:.75,ratio:'3:4',sc:'temple',
+  name:'Nhìn qua vai, đầu chiếm tiền cảnh',
+  hint:'Người quay lưng đứng sát máy, đầu và vai chiếm góc dưới. Lấy nét vào cảnh phía trước mặt.'},
  {id:'free',fig:null,cx:.5,topY:.3,h:.6,ratio:'3:4',sc:'plain',
   name:'Tự do, chỉ lưới và thước cân',
   hint:'Chỉ có lưới và thước cân máy. Dùng khi tự căn góc hoặc khi đã chọn ảnh mẫu riêng.'}
@@ -447,8 +462,9 @@ const SHOT={p1:'portrait',p2:'full',p3:'half',p4:'full',p5:'full',
             p10:'portrait',p11:'portrait',p12:'portrait',
             p13:'half',p14:'half',
             p15:'far',p16:'far',p17:'full',
-            p18:'far',p19:'far',p20:'full',p21:'full',p22:'half',free:null};
-const SHOTNAME={far:'Người nhỏ trong cảnh',full:'Toàn thân',
+            p18:'far',p19:'far',p20:'full',p21:'full',p22:'half',
+            p23:'full',p24:'sit',p25:'sit',p26:'sit',p27:'portrait',free:null};
+const SHOTNAME={far:'Người nhỏ trong cảnh',full:'Toàn thân',sit:'Ngồi',
                 half:'Nửa người',portrait:'Chân dung'};
 const ART={p1:'poses/1.webp',p2:'poses/2.webp',p3:'poses/3.webp',
            p4:'poses/4.webp',p5:'poses/5.webp',p6:'poses/6.webp'};
@@ -563,7 +579,12 @@ const WANT={
   p19:{openTop:.80,clutter:.14,vert:.22},
   p20:{vert:.72,clutter:.45,openTop:.52},
   p21:{vert:.58,clutter:.52,lineY:.50,lineStr:.55},
-  p22:{lineStr:.62,lineY:.58,openTop:.52}
+  p22:{lineStr:.62,lineY:.58,openTop:.52},
+  p23:{clutter:.55,vert:.60,openTop:.30},
+  p24:{lineStr:.55,lineY:.55,openTop:.55},
+  p25:{vert:.80,clutter:.55,openTop:.25},
+  p26:{vert:.60,clutter:.50,lineY:.60,lineStr:.50},
+  p27:{vert:.65,clutter:.50,openTop:.40}
 };
 function scan(){
   const v=E.video;if(!v.videoWidth)return;
@@ -779,6 +800,14 @@ function shotOf(L){
   const kTh=(cur==='half')?.45:.63;
   const vis=(i,t)=>L[i]&&L[i].visibility>t;
   const ankle=vis(27,aTh)||vis(28,aTh), knee=vis(25,kTh)||vis(26,kTh);
+  const hipv=[23,24].filter(i=>vis(i,.5));
+  if(knee&&hipv.length){
+    const mean=a=>a.reduce((t,i)=>t+L[i].y,0)/a.length;
+    const hy=mean(hipv), ky=mean([25,26].filter(i=>vis(i,kTh))), sy=(ls.y+rs.y)/2;
+    const torso=hy-sy;
+    /* đứng thì gối thấp hơn hông nhiều, ngồi thì đùi gần ngang nên gối sát hông */
+    if(torso>.02&&(ky-hy)<(cur==='sit'?.62:.45)*torso)return 'sit';
+  }
   if(ankle){
     if(cur==='far')return sw>.135?'full':'far';
     return sw<.095?'far':'full';
